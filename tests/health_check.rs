@@ -1,10 +1,12 @@
 use std::net::TcpListener;
 
+use zero2prod::startup::run;
+
 fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("failed to bind listener");
     let port = listener.local_addr().unwrap().port();
     let ip = listener.local_addr().unwrap().ip();
-    let server = zero2prod::run(listener).expect("failed to spawn server");
+    let server = run(listener).expect("failed to spawn server");
     _ = tokio::spawn(server);
     format!("http://{}:{}", ip, port)
 }
@@ -39,7 +41,8 @@ async fn subscribe_return_200_for_valid_input() {
     assert!(
         response.status().is_success(),
         "Unsuccessful status code {} message: {:?}",
-        response.status().as_u16(), response.text().await
+        response.status().as_u16(),
+        response.text().await
     );
 }
 

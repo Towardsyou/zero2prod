@@ -8,18 +8,18 @@ path = "src/lib.rs"
 
 [dependencies]
 actix-web = "4"
-reqwest = "0.12.7"
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+    "cookies",
+] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1", features = ["derive"] }
-
-[dependencies.sqlx]
-version = "0.5.7"
-default-features = false
-features = [
-    "runtime-actix-rustls",
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio-rustls",
     "macros",
     "postgres",
     "uuid",
     "chrono",
     "migrate",
-]
+] }
