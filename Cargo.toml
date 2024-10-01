@@ -26,3 +26,10 @@ sqlx = { version = "0.8", default-features = false, features = [
 config = "0.11"
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4.15"
+env_logger = "0.9"
+log = "0.4"
+tracing = "0.1.19"
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
+tracing-bunyan-formatter = "0.3.1"
+tracing-log = "0.2.0"
+tracing-actix-web = "0.7"
