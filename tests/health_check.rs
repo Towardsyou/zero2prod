@@ -1,8 +1,11 @@
 use std::net::TcpListener;
 
-use sqlx::{Connection, PgConnection, PgPool, Executor};
+use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
-use zero2prod::{configuration::{get_configuration, DatabaseSettings}, startup::run};
+use zero2prod::{
+    configuration::{get_configuration, DatabaseSettings},
+    startup::run,
+};
 
 pub struct TestApp {
     pub address: String,
