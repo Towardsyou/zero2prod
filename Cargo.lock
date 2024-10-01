@@ -3032,6 +3032,7 @@ dependencies = [
  "config",
  "env_logger",
  "log",
+ "once_cell",
  "reqwest",
  "serde 1.0.210",
  "sqlx",
