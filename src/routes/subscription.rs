@@ -1,25 +1,34 @@
 use actix_web::{web, HttpResponse, Responder};
 use chrono::Utc;
 use sqlx::{types::Uuid, PgPool};
-use tracing::Instrument;
 
 #[derive(serde::Deserialize)]
-pub struct FormSubscrib {
+pub struct FormSubscribe {
     name: String,
     email: String,
 }
 
-pub async fn subscribe(form: web::Form<FormSubscrib>, pool: web::Data<PgPool>) -> impl Responder {
-    let request_id = Uuid::new_v4();
-    let request_span = tracing::info_span!(
-    "Adding a new subscriber.",
-    %request_id,
-    subscriber_email = %form.email,
-    subscriber_name= %form.name
-    );
-    let _request_span_guard = request_span.enter();
-    let query_span = tracing::info_span!("Saving new subscriber details in the database");
-    match sqlx::query!(
+#[tracing::instrument(
+    name = "add a new subscriber",
+    skip(form, pool),
+    fields(
+        subscriber_email = %form.email,
+        subscriber_name = %form.name,
+    )
+)]
+pub async fn subscribe(form: web::Form<FormSubscribe>, pool: web::Data<PgPool>) -> impl Responder {
+    match insert_subscriber(form, pool).await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(e) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+#[tracing::instrument(name = "Save new subscriber to db", skip(form, pool))]
+pub async fn insert_subscriber(
+    form: web::Form<FormSubscribe>,
+    pool: web::Data<PgPool>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
         VALUES ($1, $2, $3, $4)
@@ -32,16 +41,10 @@ pub async fn subscribe(form: web::Form<FormSubscrib>, pool: web::Data<PgPool>) -
     // We use `get_ref` to get an immutable reference to the `PgConnection`
     // wrapped by `web::Data`.
     .execute(pool.get_ref())
-    .instrument(query_span)
     .await
-    {
-        Ok(_) => {
-            tracing::info!("new subscription inserted");
-            HttpResponse::Ok().finish()
-        }
-        Err(e) => {
-            tracing::error!("error inserting new subscription {:?}", e);
-            HttpResponse::InternalServerError().finish()
-        }
-    }
+    .map_err(|e| {
+        tracing::error!("Error inserting subscriber: {:?}", e);
+        e
+    })?;
+    Ok(())
 }
