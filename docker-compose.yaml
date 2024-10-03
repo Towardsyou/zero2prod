@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: newsletter
+    ports:
+      - "5432:5432"
+
+  backend:
+    image: rust2prod:latest  # Replace with your actual backend image
+    environment:
+      APP_ENVIRONMENT: production
+      APP_DATABASE__HOST: db
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
