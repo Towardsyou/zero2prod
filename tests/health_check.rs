@@ -108,7 +108,36 @@ async fn subscribe_return_200_for_valid_input() {
 }
 
 #[tokio::test]
-async fn subscribe_return_400_for_invalid_input() {
+async fn subscribe_return_40x_for_invalid_input() {
+    let app = spawn_app().await;
+
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+        ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
+        ("name=le%20guin&email=", "empty email"),
+        ("name=le%20guin&email=not-an-email", "invalid email"),
+    ];
+
+    for (body, desc) in test_cases {
+        let response = client
+            .post(format!("{}/subscriptions", &app.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("failed to send request");
+
+        assert!(
+            response.status().is_client_error(),
+            "invalid requests ({desc}) should lead to 40x response, get {} response message: {:?}",
+            response.status().as_u16(),
+            response.text().await
+        );
+    }
+}
+
+#[tokio::test]
+async fn subscribe_return_400_for_incomplete_input() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let test_cases = vec![
