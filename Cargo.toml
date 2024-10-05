@@ -39,3 +39,9 @@ serde-aux = "3"
 unicode-segmentation = "1"
 claim = "0.5"
 validator = "0.18"
+
+[dev-dependencies]
+fake="2"
+quickcheck = "1"
+quickcheck_macros = "1"
+rand = "0.8"
