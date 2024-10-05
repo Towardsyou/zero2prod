@@ -5,7 +5,7 @@ use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::domain::{NewSubscriber, SubscriberName};
+use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 
 #[derive(serde::Deserialize)]
 pub struct FormSubscribe {
@@ -18,7 +18,7 @@ impl TryFrom<FormSubscribe> for NewSubscriber {
 
     fn try_from(value: FormSubscribe) -> Result<Self, Self::Error> {
         let name = SubscriberName::from_str(&value.name)?;
-        let email = value.email;
+        let email = SubscriberEmail::from_str(&value.email)?;
         Ok(Self { email, name })
     }
 }
@@ -53,7 +53,7 @@ pub async fn insert_subscriber(
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        new_subscriber.email,
+        new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now()
     )
