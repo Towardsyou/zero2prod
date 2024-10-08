@@ -1,2 +1,5 @@
 application:
   host: "0.0.0.0"
+email_client:
+  api_url: "https://api.mailgun.net/v3"
+  sender: "test@example.com"

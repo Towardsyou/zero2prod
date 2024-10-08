@@ -1,12 +1,17 @@
+use std::str::FromStr;
+
 use secrecy::{ExposeSecret, Secret};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::ConnectOptions;
 
+use crate::domain::SubscriberEmail;
+
 #[derive(serde::Deserialize, Debug)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
+    pub email_client: EmailClientSettings,
 }
 #[derive(serde::Deserialize, Debug)]
 pub struct DatabaseSettings {
@@ -23,6 +28,18 @@ pub struct ApplicationSettings {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct EmailClientSettings {
+    pub api_url: String,
+    pub sender: String,
+}
+
+impl EmailClientSettings {
+    pub fn sender(&self) -> Result<SubscriberEmail, String> {
+        SubscriberEmail::from_str(&self.sender)
+    }
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
