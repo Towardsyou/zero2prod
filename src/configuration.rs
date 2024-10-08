@@ -34,11 +34,17 @@ pub struct ApplicationSettings {
 pub struct EmailClientSettings {
     pub api_url: String,
     pub sender: String,
+    pub authorization_token: Secret<String>,
+    pub timeout_milliseconds: u64,
 }
 
 impl EmailClientSettings {
     pub fn sender(&self) -> Result<SubscriberEmail, String> {
         SubscriberEmail::from_str(&self.sender)
+    }
+
+    pub fn timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_millis(self.timeout_milliseconds)
     }
 }
 

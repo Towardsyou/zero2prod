@@ -41,8 +41,13 @@ async fn spawn_app() -> TestApp {
         .email_client
         .sender()
         .expect("Invalid sender email address.");
-    let email_client = EmailClient::new(sender_email, configuration.email_client.api_url)
-        .expect("failed to build email client");
+    let email_client = EmailClient::new(
+        sender_email,
+        configuration.email_client.api_url,
+        configuration.email_client.authorization_token,
+        std::time::Duration::from_millis(200),
+    )
+    .expect("failed to build email client");
 
     let server = run(listener, db_pool.clone(), email_client).expect("failed to spawn server");
     _ = tokio::spawn(server);

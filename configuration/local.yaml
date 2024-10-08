@@ -1,5 +1,6 @@
 application:
   host: "127.0.0.1"
 email_client:
-  api_url: "localhost"
+  api_url: "http://localhost"
   sender: "test@example.com"
+  authorization_token: "fake_token"

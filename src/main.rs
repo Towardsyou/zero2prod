@@ -1,8 +1,7 @@
 use sqlx::postgres::PgPoolOptions;
-use std::{net::TcpListener, str::FromStr};
+use std::net::TcpListener;
 use zero2prod::{
     configuration::get_configuration,
-    domain::SubscriberEmail,
     email_client::EmailClient,
     startup::run,
     telemetry::{get_subscriber, init_subscriber},
@@ -24,7 +23,9 @@ async fn main() -> std::io::Result<()> {
         .expect("Invalid sender email address.");
     let email_client = EmailClient::new(
         sender,
-        configuration.email_client.api_url,
+        configuration.email_client.api_url.clone(),
+        configuration.email_client.authorization_token.clone(),
+        configuration.email_client.timeout(),
     )
     .expect("failed to build email client");
 
