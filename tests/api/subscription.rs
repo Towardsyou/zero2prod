@@ -3,16 +3,8 @@ use crate::helper::spawn_app;
 #[tokio::test]
 async fn subscribe_return_200_for_valid_input() {
     let app = spawn_app().await;
-
-    let client = reqwest::Client::new();
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
-    let response = client
-        .post(format!("{}/subscriptions", &app.address))
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(body)
-        .send()
-        .await
-        .expect("failed to send request");
+    let response = app.post_subscriptions(body.to_owned()).await;
 
     assert!(
         response.status().is_success(),
@@ -32,8 +24,6 @@ async fn subscribe_return_200_for_valid_input() {
 #[tokio::test]
 async fn subscribe_return_40x_for_invalid_input() {
     let app = spawn_app().await;
-
-    let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
         ("name=le%20guin&email=", "empty email"),
@@ -41,14 +31,7 @@ async fn subscribe_return_40x_for_invalid_input() {
     ];
 
     for (body, desc) in test_cases {
-        let response = client
-            .post(format!("{}/subscriptions", &app.address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
-            .send()
-            .await
-            .expect("failed to send request");
-
+        let response = app.post_subscriptions(body.to_owned()).await;
         assert!(
             response.status().is_client_error(),
             "invalid requests ({desc}) should lead to 40x response, get {} response message: {:?}",
@@ -61,7 +44,6 @@ async fn subscribe_return_40x_for_invalid_input() {
 #[tokio::test]
 async fn subscribe_return_400_for_incomplete_input() {
     let app = spawn_app().await;
-    let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
         ("email=ursula_le_guin%40gmail.com", "missing the name"),
@@ -69,13 +51,7 @@ async fn subscribe_return_400_for_incomplete_input() {
     ];
     for (invalid_body, error_message) in test_cases {
         // Act
-        let response = client
-            .post(&format!("{}/subscriptions", &app.address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(invalid_body)
-            .send()
-            .await
-            .expect("Failed to execute request.");
+        let response = app.post_subscriptions(invalid_body.to_owned()).await;
         // Assert
         assert_eq!(
             400,
