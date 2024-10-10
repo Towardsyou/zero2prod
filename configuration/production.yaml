@@ -1,6 +1,7 @@
 application:
   host: "0.0.0.0"
+  base_url: "http://127.0.0.1"
 email_client:
-  api_url: "https://api.mailgun.net/v3"
+  api_url: "https://api.postmarkapp.com"
   sender: "test@example.com"
   authorization_token: "a_real_token"
