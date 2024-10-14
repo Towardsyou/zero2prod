@@ -37,58 +37,25 @@ fn generate_subscription_token() -> String {
         .collect()
 }
 
+#[derive(thiserror::Error)]
 pub enum SubscribeError {
+    #[error("{0}")]
     ValidationError(String),
-    PoolError(sqlx::Error),
-    InsertSubscriberError(sqlx::Error),
-    StoreTokenError(StoreTokenError),
-    SendEmailError(reqwest::Error),
-    TransactionError(sqlx::Error),
-}
-
-impl std::fmt::Display for SubscribeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SubscribeError::ValidationError(e) => write!(f, "{}", e),
-            SubscribeError::PoolError(_) => {
-                write!(f, "Failed to acquire a Postgres connection from the pool")
-            }
-            SubscribeError::InsertSubscriberError(_) => {
-                write!(f, "Failed to insert new subscriber in the database.")
-            }
-            SubscribeError::TransactionError(_) => {
-                write!(
-                    f,
-                    "Failed to commit SQL transaction to store a new subscriber."
-                )
-            }
-            SubscribeError::StoreTokenError(_) => write!(
-                f,
-                "Failed to store the confirmation token for a new subscriber."
-            ),
-            SubscribeError::SendEmailError(_) => {
-                write!(f, "Failed to send a confirmation email.")
-            }
-        }
-    }
+    #[error("failed to acquire a Postgres connection from the pool")]
+    PoolError(#[source] sqlx::Error),
+    #[error("failed to insert a new subscriber in the database")]
+    InsertSubscriberError(#[source] sqlx::Error),
+    #[error("failed to store the confirmation token for a new subscriber")]
+    StoreTokenError(#[from] StoreTokenError),
+    #[error("failed to send a confirmation email")]
+    SendEmailError(#[from] reqwest::Error),
+    #[error("failed to commit SQL transaction")]
+    TransactionError(#[source] sqlx::Error),
 }
 
 impl std::fmt::Debug for SubscribeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         error_chain_fmt(self, f)
-    }
-}
-
-impl std::error::Error for SubscribeError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            SubscribeError::ValidationError(_) => None,
-            SubscribeError::PoolError(e) => Some(e),
-            SubscribeError::InsertSubscriberError(e) => Some(e),
-            SubscribeError::StoreTokenError(e) => Some(e),
-            SubscribeError::SendEmailError(e) => Some(e),
-            SubscribeError::TransactionError(e) => Some(e),
-        }
     }
 }
 
@@ -102,24 +69,6 @@ impl ResponseError for SubscribeError {
             | SubscribeError::StoreTokenError(_)
             | SubscribeError::SendEmailError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
-    }
-}
-
-impl From<reqwest::Error> for SubscribeError {
-    fn from(value: reqwest::Error) -> Self {
-        Self::SendEmailError(value)
-    }
-}
-
-impl From<StoreTokenError> for SubscribeError {
-    fn from(value: StoreTokenError) -> Self {
-        Self::StoreTokenError(value)
-    }
-}
-
-impl From<String> for SubscribeError {
-    fn from(value: String) -> Self {
-        Self::ValidationError(value)
     }
 }
 
@@ -138,7 +87,7 @@ pub async fn subscribe(
     base_url: web::Data<ApplicationBaseUrl>,
 ) -> Result<HttpResponse, SubscribeError> {
     let mut transaction = pool.begin().await.map_err(SubscribeError::PoolError)?;
-    let new_subscriber = NewSubscriber::try_from(form.0)?;
+    let new_subscriber = form.0.try_into().map_err(SubscribeError::ValidationError)?;
     let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber)
         .await
         .map_err(SubscribeError::InsertSubscriberError)?;
@@ -250,24 +199,6 @@ impl std::error::Error for StoreTokenError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         Some(&self.0)
     }
-}
-
-impl ResponseError for StoreTokenError {
-    //     fn status_code(&self) -> actix_web::http::StatusCode {
-    //         actix_web::http::StatusCode::INTERNAL_SERVER_ERROR
-    //     }
-
-    //     fn error_response(&self) -> HttpResponse<actix_web::body::BoxBody> {
-    //         let mut res = HttpResponse::new(self.status_code());
-
-    //         let mut buf = web::BytesMut::new();
-    //         let _ = std::write!(helpers::MutWriter(&mut buf), "{}", self);
-
-    //         let mime = mime::TEXT_PLAIN_UTF_8.try_into_value().unwrap();
-    //         res.headers_mut().insert(actix_web::http::header::CONTENT_TYPE, mime);
-
-    //         res.set_body(actix_web::body::BoxBody::new(buf))
-    //     }
 }
 
 fn error_chain_fmt(
