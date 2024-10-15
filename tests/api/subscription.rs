@@ -133,5 +133,4 @@ async fn subscribe_fails_if_fatal_db_error() {
     let resp = app.post_subscriptions(body.into()).await;
 
     assert_eq!(resp.status().as_u16(), 500);
-    println!("test passed ---------------------");
 }

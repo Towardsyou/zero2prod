@@ -1,4 +1,3 @@
-use reqwest::Url;
 use wiremock::{
     matchers::{method, path},
     Mock, ResponseTemplate,
@@ -29,21 +28,7 @@ async fn confirm_subscriber_with_confirm_link() {
     app.post_subscriptions(body.into()).await;
 
     let subscribe_req = &app.email_server.received_requests().await.unwrap()[0];
-    let body: serde_json::Value = serde_json::from_slice(&subscribe_req.body).unwrap();
-
-    let get_link = |s: &str| {
-        let links: Vec<_> = linkify::LinkFinder::new()
-            .links(s)
-            .filter(|l| *l.kind() == linkify::LinkKind::Url)
-            .collect();
-        assert_eq!(links.len(), 1);
-        links[0].as_str().to_owned()
-    };
-
-    let raw_link = get_link(&body["HtmlBody"].as_str().unwrap());
-    let mut confirmation_link = Url::parse(&raw_link).expect("invalid link from resp");
-    confirmation_link.set_port(Some(app.port)).unwrap();
-    assert_eq!(confirmation_link.host_str().unwrap(), "127.0.0.1");
+    let confirmation_link = app.get_confirmation_link(&subscribe_req).await;
 
     let resp_confirm = reqwest::get(confirmation_link).await.unwrap();
     assert_eq!(resp_confirm.status().as_u16(), 200);

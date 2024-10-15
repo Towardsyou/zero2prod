@@ -25,6 +25,34 @@ impl TestApp {
             .await
             .expect("Failed to execute request.")
     }
+
+    pub async fn get_confirmation_link(&self, req: &wiremock::Request) -> reqwest::Url {
+        let body: serde_json::Value = serde_json::from_slice(&req.body).unwrap();
+
+        let get_link = |s: &str| {
+            let links: Vec<_> = linkify::LinkFinder::new()
+                .links(s)
+                .filter(|l| *l.kind() == linkify::LinkKind::Url)
+                .collect();
+            assert_eq!(links.len(), 1);
+            links[0].as_str().to_owned()
+        };
+
+        let raw_link = get_link(&body["HtmlBody"].as_str().unwrap());
+        let mut confirmation_link = reqwest::Url::parse(&raw_link).expect("invalid link from resp");
+        confirmation_link.set_port(Some(self.port)).unwrap();
+        assert_eq!(confirmation_link.host_str().unwrap(), "127.0.0.1");
+        confirmation_link
+    }
+
+    pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(&format!("{}/newsletters", self.address))
+            .json(&body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
 }
 
 static TRACING: Lazy<()> = Lazy::new(|| {
