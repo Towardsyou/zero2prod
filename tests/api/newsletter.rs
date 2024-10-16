@@ -1,4 +1,5 @@
 use crate::helper::{spawn_app, TestApp};
+use uuid::Uuid;
 use wiremock::matchers::{any, method, path};
 use wiremock::{Mock, ResponseTemplate};
 
@@ -67,6 +68,87 @@ async fn newsletteres_returns_400_for_invalid_data() {
         let resp = app.post_newsletters(invalid_body).await;
         assert_eq!(resp.status().as_u16(), 400, "test failed for {}", error_msg);
     }
+}
+
+#[tokio::test]
+async fn requests_missing_authentication_are_rejected() {
+    let app = spawn_app().await;
+
+    let body = serde_json::json!({
+        "title": "Newsletter title",
+        "content": {
+            "text": "Newsletter body as plain text",
+            "html": "<p>Newsletter body as HTML</p>",
+        }
+    });
+    let resp = reqwest::Client::new()
+        .post(&format!("{}/newsletters", &app.address))
+        .json(&body)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    assert_eq!(resp.status().as_u16(), 401);
+    assert_eq!(
+        resp.headers()["WWW-Authenticate"],
+        "Basic realm=\"publish\""
+    )
+}
+
+#[tokio::test]
+async fn non_existing_user_is_rejected() {
+    let app = spawn_app().await;
+    let username = Uuid::new_v4().to_string();
+    let password = Uuid::new_v4().to_string();
+
+    let body = serde_json::json!({
+        "title": "Newsletter title",
+        "content": {
+            "text": "Newsletter body as plain text",
+            "html": "<p>Newsletter body as HTML</p>",
+        }
+    });
+    let resp = reqwest::Client::new()
+        .post(&format!("{}/newsletters", app.address))
+        .basic_auth(username, Some(password))
+        .json(&body)
+        .send()
+        .await
+        .expect("failed to send request");
+
+    assert_eq!(resp.status().as_u16(), 401);
+    assert_eq!(
+        resp.headers()["WWW-Authenticate"],
+        "Basic realm=\"publish\""
+    )
+}
+
+#[tokio::test]
+async fn invalid_password_is_rejected() {
+    let app = spawn_app().await;
+    let username = &app.test_user.username;
+    let password = Uuid::new_v4().to_string();
+
+    let body = serde_json::json!({
+        "title": "Newsletter title",
+        "content": {
+            "text": "Newsletter body as plain text",
+            "html": "<p>Newsletter body as HTML</p>",
+        }
+    });
+    let resp = reqwest::Client::new()
+        .post(&format!("{}/newsletters", app.address))
+        .basic_auth(username, Some(password))
+        .json(&body)
+        .send()
+        .await
+        .expect("failed to send request");
+
+    assert_eq!(resp.status().as_u16(), 401);
+    assert_eq!(
+        resp.headers()["WWW-Authenticate"],
+        "Basic realm=\"publish\""
+    )
 }
 
 async fn create_unconfirmed_subscriber(app: &TestApp) -> reqwest::Url {

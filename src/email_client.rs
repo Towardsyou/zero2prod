@@ -122,7 +122,13 @@ mod tests {
     }
 
     fn email_client(api_url: String) -> EmailClient {
-        EmailClient::new(email(), api_url, Secret::new(Faker.fake()), std::time::Duration::from_millis(200)).unwrap()
+        EmailClient::new(
+            email(),
+            api_url,
+            Secret::new(Faker.fake()),
+            std::time::Duration::from_millis(200),
+        )
+        .unwrap()
     }
 
     struct SendEmailBodyMathcer;
