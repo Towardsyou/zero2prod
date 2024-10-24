@@ -6,9 +6,7 @@ use anyhow::Context;
 use base64::Engine;
 use secrecy::Secret;
 
-use crate::{
-    domain::SubscriberEmail, email_client::EmailClient, routes::error_chain_fmt,
-};
+use crate::{domain::SubscriberEmail, email_client::EmailClient, routes::error_chain_fmt};
 
 #[derive(thiserror::Error)]
 pub enum PublishError {
