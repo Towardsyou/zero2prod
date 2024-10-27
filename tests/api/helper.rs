@@ -84,12 +84,17 @@ impl TestApp {
             .unwrap()
     }
 
-    pub async fn get_admin_dashboard(&self) -> String {
+    pub async fn get_admin_dashboard(&self) -> reqwest::Response {
         self.api_client
             .get(&format!("{}/admin/dashboard", self.address))
             .send()
             .await
             .expect("failed to get /admin/dashboard")
+    }
+
+    pub async fn get_admin_dashboard_html(&self) -> String {
+        self.get_admin_dashboard()
+            .await
             .text()
             .await
             .expect("failed to get text from admin dashboad response")
