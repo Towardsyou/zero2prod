@@ -9,3 +9,4 @@ database:
   database_name: "newsletter"
 email_client:
   timeout_milliseconds: 10000
+redis_url: "redis://127.0.0.1:6379"

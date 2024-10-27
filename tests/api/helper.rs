@@ -83,6 +83,17 @@ impl TestApp {
             .await
             .unwrap()
     }
+
+    pub async fn get_admin_dashboard(&self) -> String {
+        self.api_client
+            .get(&format!("{}/admin/dashboard", self.address))
+            .send()
+            .await
+            .expect("failed to get /admin/dashboard")
+            .text()
+            .await
+            .expect("failed to get text from admin dashboad response")
+    }
 }
 
 pub struct TestUser {
@@ -195,4 +206,12 @@ async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .await
         .expect("Failed to migrate the database");
     connection_pool
+}
+
+pub fn assert_is_redirect_to(resp: &reqwest::Response, location: &str) {
+    assert_eq!(resp.status().as_u16(), 303);
+    assert_eq!(
+        resp.headers().get(reqwest::header::LOCATION).unwrap(),
+        location
+    );
 }

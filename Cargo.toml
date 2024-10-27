@@ -10,6 +10,7 @@ path = "src/lib.rs"
 actix-web = "4.9"
 actix-web-flash-messages = { version = "*", features = ["cookies"] }
 actix-web-lab = "*"
+actix-session = { version = "*", features = ["redis-session"] }
 anyhow = "1"
 argon2 = { version = "*", features = ["std"] }
 base64 = "0.22"
@@ -46,7 +47,7 @@ tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
 unicode-segmentation = "1"
 urlencoding = "*"
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 validator = "0.18"
 
 [dev-dependencies]
