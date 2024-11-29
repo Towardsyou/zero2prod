@@ -7,10 +7,10 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
+actix-session = { version = "*", features = ["redis-session"] }
 actix-web = "4.9"
 actix-web-flash-messages = { version = "*", features = ["cookies"] }
 actix-web-lab = "*"
-actix-session = { version = "*", features = ["redis-session"] }
 anyhow = "1"
 argon2 = { version = "*", features = ["std"] }
 base64 = "0.22"

@@ -3,14 +3,7 @@ use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::session_state::TypedSession;
-
-fn e500<T>(e: T) -> actix_web::Error
-where
-    T: std::fmt::Debug + std::fmt::Display + 'static,
-{
-    actix_web::error::ErrorInternalServerError(e)
-}
+use crate::{session_state::TypedSession, utils::e500};
 
 pub async fn admin_dashboard(
     pool: web::Data<PgPool>,
@@ -25,16 +18,20 @@ pub async fn admin_dashboard(
         .content_type(ContentType::html())
         .body(format!(
             r#"
-            <!DOCTYPE html>
-            <html lang="en">
-                <head>
-                    <meta http-equiv="content-type" content="text/html; charset=utf-8">
-                    <title>Admin dashboard</title>
-                </head>
-                <body>
-                    <p>Welcome {username}!</p>
-                </body>
-            </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <title>Admin dashboard</title>
+</head>
+<body>
+    <p>Welcome {username}!</p>
+    <p>Available actions:</p>
+    <ol>
+        <li><a href="/admin/password">Change password</a></li>
+    </ol>
+</body>
+</html>
         "#
         )))
 }
