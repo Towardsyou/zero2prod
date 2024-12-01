@@ -1,5 +1,5 @@
 use crate::{
-    authentication::{validate_credentials, AuthError, Credentials},
+    authentication::{validate_credentials, AuthError, Credentials, UserId},
     routes::admin::dashboard::get_username,
 };
 
@@ -9,10 +9,7 @@ use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::{
-    session_state::TypedSession,
-    utils::{e500, see_other},
-};
+use crate::utils::{e500, see_other};
 
 #[derive(Deserialize)]
 pub struct ChangePasswordForm {
@@ -22,20 +19,15 @@ pub struct ChangePasswordForm {
 }
 
 pub async fn change_password(
-    session: TypedSession,
     form: web::Form<ChangePasswordForm>,
     pool: web::Data<PgPool>,
+    user_id: web::ReqData<UserId>,
 ) -> Result<HttpResponse, actix_web::Error> {
     if form.new_password.expose_secret().len() < 12 {
         FlashMessage::error("Your new password must be at least 12 characters long.").send();
         return Ok(see_other("/admin/password"));
     }
-    let user_id: uuid::Uuid = match session.get_user_id().map_err(e500)? {
-        None => {
-            return Ok(see_other("/login"));
-        }
-        Some(uid) => uid,
-    };
+    let user_id = user_id.into_inner();
 
     if form.new_password.expose_secret() != form.new_password_confirmed.expose_secret() {
         FlashMessage::error(
@@ -45,7 +37,7 @@ pub async fn change_password(
         return Ok(see_other("/admin/password"));
     }
 
-    let username = get_username(user_id, &pool).await.map_err(e500)?;
+    let username = get_username(*user_id, &pool).await.map_err(e500)?;
 
     let credentials = Credentials {
         username,
@@ -61,7 +53,7 @@ pub async fn change_password(
         };
     }
 
-    crate::authentication::change_password(user_id, form.0.new_password, &pool)
+    crate::authentication::change_password(*user_id, form.0.new_password, &pool)
         .await
         .map_err(e500)?;
     FlashMessage::error("Your password has been changed.").send();

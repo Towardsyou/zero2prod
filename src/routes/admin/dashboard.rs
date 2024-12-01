@@ -3,7 +3,10 @@ use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{session_state::TypedSession, utils::{e500, see_other}};
+use crate::{
+    session_state::TypedSession,
+    utils::{e500, see_other},
+};
 
 pub async fn admin_dashboard(
     pool: web::Data<PgPool>,
