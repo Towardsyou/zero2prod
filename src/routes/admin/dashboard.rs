@@ -31,6 +31,7 @@ pub async fn admin_dashboard(
     <p>Welcome {username}!</p>
     <p>Available actions:</p>
     <li>
+        <a href="/admin/newsletters">Create a new issue</a>
         <form name="logoutForm" action="/admin/logout" method="post">
             <input type="submit" value="Logout">
         </form>
