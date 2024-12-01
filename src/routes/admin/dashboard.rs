@@ -3,7 +3,7 @@ use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{session_state::TypedSession, utils::e500};
+use crate::{session_state::TypedSession, utils::{e500, see_other}};
 
 pub async fn admin_dashboard(
     pool: web::Data<PgPool>,
@@ -12,7 +12,7 @@ pub async fn admin_dashboard(
     let username = if let Some(user_id) = session.get_user_id().map_err(e500)? {
         get_username(user_id, &pool).await.map_err(e500)?
     } else {
-        todo!()
+        return Ok(see_other("/login"));
     };
     Ok(HttpResponse::Ok()
         .content_type(ContentType::html())
@@ -27,9 +27,11 @@ pub async fn admin_dashboard(
 <body>
     <p>Welcome {username}!</p>
     <p>Available actions:</p>
-    <ol>
-        <li><a href="/admin/password">Change password</a></li>
-    </ol>
+    <li>
+        <form name="logoutForm" action="/admin/logout" method="post">
+            <input type="submit" value="Logout">
+        </form>
+    </li>
 </body>
 </html>
         "#
@@ -37,7 +39,7 @@ pub async fn admin_dashboard(
 }
 
 #[tracing::instrument(name = "Get username", skip(pool))]
-async fn get_username(user_id: Uuid, pool: &PgPool) -> Result<String, anyhow::Error> {
+pub async fn get_username(user_id: Uuid, pool: &PgPool) -> Result<String, anyhow::Error> {
     let row = sqlx::query!("select username from users where user_id = $1", user_id)
         .fetch_one(pool)
         .await

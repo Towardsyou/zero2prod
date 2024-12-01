@@ -108,6 +108,10 @@ impl TestApp {
             .expect("Failed to get change password")
     }
 
+    pub async fn get_change_password_html(&self) -> String {
+        self.get_change_password().await.text().await.unwrap()
+    }
+
     pub async fn post_change_password<Body>(&self, body: &Body) -> reqwest::Response
     where
         Body: serde::Serialize,
@@ -118,6 +122,14 @@ impl TestApp {
             .send()
             .await
             .expect("failed to post change password")
+    }
+
+    pub async fn post_logout(&self) -> reqwest::Response {
+        self.api_client
+            .post(&format!("{}/admin/logout", &self.address))
+            .send()
+            .await
+            .expect("failed to do admin logout")
     }
 }
 
