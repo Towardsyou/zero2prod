@@ -92,6 +92,7 @@ pub async fn try_execute_task(
     email_client: &EmailClient,
 ) -> Result<ExecutionOutcome, anyhow::Error> {
     let task = dequeue_task(pool).await?;
+    // TODO add retry count and retry interval
     if task.is_none() {
         return Ok(ExecutionOutcome::EmptyQueue);
     }
@@ -141,9 +142,11 @@ async fn worker_loop(pool: PgPool, email_client: EmailClient) -> Result<(), anyh
                 tokio::time::sleep(Duration::from_secs(10)).await;
             }
             Err(_) => {
+                // TODO exponential backoff
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }
+        // TODO add a clean up job on past deliveries
     }
 }
 
