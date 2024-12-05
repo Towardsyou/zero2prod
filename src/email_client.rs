@@ -16,7 +16,7 @@ impl EmailClient {
         api_url: String,
         authorization_token: Secret<String>,
         timeout: std::time::Duration,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, anyhow::Error> {
         if api_url.trim().validate_url() {
             let http_client: reqwest::Client = reqwest::Client::builder()
                 .timeout(timeout)
@@ -29,7 +29,7 @@ impl EmailClient {
                 authorization_token,
             })
         } else {
-            Err("Invalid API URL {api_url}".to_string())
+            Err(anyhow::anyhow!("Invalid API URL {api_url}"))
         }
     }
 
