@@ -1,47 +1,22 @@
 use std::str::FromStr;
 
-use crate::{authentication::UserId, utils::see_other};
+use crate::{
+    authentication::UserId,
+    idempotency::{get_saved_response, save_response, IdempotencyKey},
+    utils::{e400, e500, see_other},
+};
 use actix_web::{web, HttpResponse};
 use actix_web_flash_messages::FlashMessage;
 use anyhow::Context;
 
-use crate::{domain::SubscriberEmail, email_client::EmailClient, routes::error_chain_fmt};
-
-#[derive(thiserror::Error)]
-pub enum PublishError {
-    #[error("Authentication error")]
-    AuthError(#[source] anyhow::Error),
-    #[error(transparent)]
-    UnexpectedError(#[from] anyhow::Error),
-}
-
-impl std::fmt::Debug for PublishError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        error_chain_fmt(self, f)
-    }
-}
-
-impl actix_web::ResponseError for PublishError {
-    fn error_response(&self) -> HttpResponse {
-        match self {
-            PublishError::UnexpectedError(_) => HttpResponse::InternalServerError().finish(),
-            PublishError::AuthError(_) => {
-                let mut resp = HttpResponse::Unauthorized();
-                resp.insert_header((
-                    actix_web::http::header::WWW_AUTHENTICATE,
-                    "Basic realm=\"publish\"",
-                ));
-                resp.finish()
-            }
-        }
-    }
-}
+use crate::{domain::SubscriberEmail, email_client::EmailClient};
 
 #[derive(serde::Deserialize)]
 pub struct PublishParams {
     title: String,
     html_content: String,
     text_content: String,
+    idempotent_key: String,
 }
 
 #[tracing::instrument(
@@ -54,22 +29,32 @@ pub async fn publish_newsletter(
     email_client: web::Data<EmailClient>,
     params: web::Form<PublishParams>,
     user_id: web::ReqData<UserId>,
-) -> Result<HttpResponse, PublishError> {
-    tracing::Span::current().record("user_id", tracing::field::display(*user_id));
+) -> Result<HttpResponse, actix_web::Error> {
+    let user_id = user_id.into_inner();
+    let PublishParams {
+        title,
+        text_content,
+        html_content,
+        idempotent_key,
+    } = params.0;
+    let idempotency_key: IdempotencyKey = idempotent_key.try_into().map_err(e400)?;
+    if let Some(saved_response) = get_saved_response(&pool, &idempotency_key, *user_id)
+        .await
+        .map_err(e500)?
+    {
+        FlashMessage::info("The newsletter issue has been published!").send();
+        return Ok(saved_response);
+    }
 
-    let subscribers = get_confirmed_subscribers(&pool).await?;
+    let subscribers = get_confirmed_subscribers(&pool).await.map_err(e500)?;
     for s in subscribers {
         match s {
             Ok(s) => {
                 email_client
-                    .send_email(
-                        &s.email,
-                        &params.title,
-                        &params.html_content,
-                        &params.text_content,
-                    )
+                    .send_email(&s.email, &title, &html_content, &text_content)
                     .await
-                    .with_context(|| format!("failed to send newsletter to {:?}", s.email))?;
+                    .with_context(|| format!("failed to send newsletter to {:?}", s.email))
+                    .map_err(e500)?;
             }
             Err(e) => {
                 tracing::warn!(
@@ -79,7 +64,11 @@ pub async fn publish_newsletter(
         }
     }
     FlashMessage::info("The newsletter issue has been published!").send();
-    Ok(see_other("/admin/newsletters"))
+    let response = see_other("/admin/newsletters");
+    let response = save_response(&pool, &idempotency_key, *user_id, response)
+        .await
+        .map_err(e500)?;
+    Ok(response)
 }
 
 struct ConfirmedSubscriber {
